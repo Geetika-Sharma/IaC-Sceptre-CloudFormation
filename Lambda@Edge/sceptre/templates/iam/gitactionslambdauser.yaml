@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: IAM User for GitHub actions
+  
+Parameters:
+  Name:
+    Description: Project ID (lowercase).
+    Type: String
+  LambdaARN:
+    Description: ARN of the Lambda
+    Type: String
+  CloudFrontARN:
+    Description: ARN of the Cloudfront
+    Type: String
+
+Resources:
+  GithubActionsLambdaUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub '${Name}-github-actions-lambda-user'
+      Policies:
+      - PolicyName: !Sub '${Name}-github-actions-lambda-user-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: AllowLambda
+            Effect: 'Allow'
+            Action:
+            - 'lambda:CreateFunction'
+            - 'lambda:UpdateFunctionConfiguration'
+            - 'lambda:GetFunction'
+            - 'lambda:UpdateFunctionCode'
+            - 'lambda:ListVersionsByFunction'
+            - 'lambda:EnableReplication*'
+            Resource:
+            - !Ref LambdaARN
+            - !Sub ${LambdaARN}*
+          - Sid: AllowCDN
+            Effect: 'Allow'
+            Action:
+            - 'cloudfront:GetDistributionConfig'
+            - 'cloudfront:GetDistribution'
+            - 'cloudfront:ListDistributions'
+            - 'cloudfront:UpdateDistribution'
+            Resource:
+            - !Ref CloudFrontARN
+
+
+  GithubActionsLambdaUserKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref GithubActionsLambdaUser
+
+  GithubActionsLambdaUserKeyParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub '/${Name}/githubaction/lambda/user/key'
+      Description: String
+      Type: String
+      Value: !Ref GithubActionsLambdaUserKeys
+
+  GithubActionsLambdaUserSecretParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub '/${Name}/githubaction/lambda/user/secret'
+      Description: String
+      Type: String
+      Value: !GetAtt GithubActionsLambdaUserKeys.SecretAccessKey
+
+
+Outputs:
+  GithubActionsLambdaUser:
+    Description: Service user ARN
+    Value: !Ref GithubActionsLambdaUser
+  GithubActionsLambdaUserKeyParamStorePath:
+    Description: Created Service User Paramters Store Key Path
+    Value: !Ref GithubActionsLambdaUserKeyParam
+  GithubActionsLambdaUserSecretParamStorePath:
+    Description: Created Service User Paramters Store Secret Path
+    Value: !Ref GithubActionsLambdaUserSecretParam

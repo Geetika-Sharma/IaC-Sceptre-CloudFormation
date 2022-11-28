@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: IAM User for GitHub actions
+  
+Parameters:
+  Name:
+    Description: Project ID (lowercase).
+    Type: String
+  samplePackagesBucketARN:
+    Description: ARN of sample Packages Bucket
+    Type: String
+  CloudFrontID:
+    Description: CloudFront ID
+    Type: String
+
+Resources:
+  GithubActionsUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub '${Name}-github-actions-user'
+      Policies:
+      - PolicyName: !Sub '${Name}-github-actions-user-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: 'Allow'
+            Action:
+            - 's3:ListBucket'
+            - 's3:*Object'
+            - 's3:PUT*'
+            Resource:
+            - !Sub ${samplePackagesBucketARN}
+            - !Sub ${samplePackagesBucketARN}/*
+          - Effect: 'Allow'
+            Action:
+            - 'cloudfront:CreateInvalidation'
+            Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontID}
+          - Effect: 'Allow'
+            Action:
+            - 'ssm:GetParameter*'
+            - 'ssm:PutParameter'
+            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Name}/*
+
+  GithubActionsUserKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref GithubActionsUser
+
+  GithubActionsUserKeyParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub '/${Name}/githubaction/user/key'
+      Description: String
+      Type: String
+      Value: !Ref GithubActionsUserKeys
+
+  GithubActionsUserSecretParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub '/${Name}/githubaction/user/secret'
+      Description: String
+      Type: String
+      Value: !GetAtt GithubActionsUserKeys.SecretAccessKey
+
+
+Outputs:
+  GithubActionsUser:
+    Description: Service user ARN
+    Value: !Ref GithubActionsUser
+  GithubActionsUserKeyParamStorePath:
+    Description: Created Service User Paramters Store Key Path
+    Value: !Ref GithubActionsUserKeyParam
+  GithubActionsUserSecretParamStorePath:
+    Description: Created Service User Paramters Store Secret Path
+    Value: !Ref GithubActionsUserSecretParam

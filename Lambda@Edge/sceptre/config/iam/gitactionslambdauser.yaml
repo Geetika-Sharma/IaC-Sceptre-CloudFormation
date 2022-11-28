@@ -1,0 +1,5 @@
+template_path: iam/gitactionslambdauser.yaml
+parameters:
+  Name: {{ project_code }}
+  LambdaARN: !stack_output lambda/lambdaatedge.yaml::LambdaARN
+  CloudFrontARN: {{ cloudfront_arn }}

@@ -1,0 +1,8 @@
+template_path: ssm/parameters.yaml
+
+parameters:
+  Name: {{ project_code }}
+  ssm1LatestVersion: {{ ssm1_latest_version }}
+  ssm2LatestVersion: {{ ssm2_latest_version }}
+stack_tags:
+  Project: {{ project_code }}

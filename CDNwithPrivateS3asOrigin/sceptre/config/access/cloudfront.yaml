@@ -1,0 +1,6 @@
+template_path: access/cloudfront.yaml
+parameters:
+  sampleBucketDomain: !stack_output storage/s3.yaml::samplePackagesBucketDomain
+  CertificateArn: {{ sample_certificate_arn }}
+  Aliases: sample.example.com
+  LambdaBlogARN: {{ lambda_function_arn }}

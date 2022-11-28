@@ -1,0 +1,22 @@
+# Project Global variables
+project_code: sample
+region: us-east-1
+
+# S3 variables
+s3_sample_packages_bucket: sample.packages
+cloudfront_id: # Specify CloudFront IT
+canonical_user_id: # Specify Canonical User ID obtained by creating CDN - 'CFS3CanonicalUserId'
+
+# CloudFront variables
+sample_certificate_arn: # Specify certificate ARN
+
+# Route 53 variables
+hosted_zone_id: # Specify Hosted Zone ID
+full_domain_name: # Specify full domain name
+
+# SSM variables
+ssm1_latest_version: 2.0.0
+ssm2_latest_version: 0.1.0
+
+# Lambda variables
+lambda_function_arn: # Specify Lambda Function ARN with version

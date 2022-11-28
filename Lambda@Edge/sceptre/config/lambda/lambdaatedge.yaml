@@ -1,0 +1,5 @@
+template_path: lambda/lambdaatedge.yaml
+parameters:
+  Name: {{ lambda_function_name }}
+  CodeS3Bucket: !stack_output storage/s3lambda.yaml::BucketName
+  CodeS3Key: function.zip

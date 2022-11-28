@@ -1,0 +1,5 @@
+template_path: iam/gitactionsuser.yaml
+parameters:
+  Name: {{ project_code }}
+  samplePackagesBucketARN: !stack_output storage/s3.yaml::samplePackagesBucketARN
+  CloudFrontID: !stack_output access/cloudfront.yaml::ServiceID

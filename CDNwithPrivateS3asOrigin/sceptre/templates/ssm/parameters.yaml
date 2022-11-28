@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Parameters for sample Project
+  
+Parameters:
+  Name: 
+    Description: Project Name
+    Type: String
+  ssm1LatestVersion:
+    Description: ssm1 Latest Version
+    Type: String
+  ssm2LatestVersion:
+    Description: ssm2 Latest Version
+    Type: String
+  
+Resources:
+  ssm1Latest:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Name: !Sub '/${Name}/ssm1_latest_version'
+      Value: !Ref ssm1LatestVersion
+  ssm2Latest:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Name: !Sub '/${Name}/ssm2_latest_version'
+      Value: !Ref ssm2LatestVersion

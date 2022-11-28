@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: S3 Bucket for sample
+
+Parameters:
+  BucketName:
+    Description: Project name.
+    Type: String
+  CloudFrontID:
+    Description: CloudFront ID
+    Type: String
+  FullDomainName:
+    AllowedPattern: "[a-z0-9]+[-.a-z0-9]*(\\.[a-z][a-z]+)+"
+    ConstraintDescription: "Provide a valid domain name using only lowercase letters, numbers, and dash (-)"
+    Description: The full domain name.
+    Type: String
+  S3CanonicalUserId:
+    Description: Canonical User Id
+    Type: String
+
+Resources:
+  sampleLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${BucketName}.logs'
+      AccessControl: LogDeliveryWrite
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeletesampleLogsAfter7Days
+            Status: Enabled
+            ExpirationInDays: 7
+    DeletionPolicy: Retain
+    
+  sampleExamplePackagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      AccessControl: 'Private'
+      LoggingConfiguration:
+        DestinationBucketName: !Ref 'sampleLogsBucket'
+        LogFilePrefix: !Sub 'logs/s3/${FullDomainName}/'
+    DeletionPolicy: Retain
+
+  sampleExamplePackagesBucketPolicy:
+    Metadata:
+      Comment: 'Bucket policy to allow cloudfront to access the data'
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref sampleExamplePackagesBucket    
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: 'Allow'
+          Action:
+            - 's3:GetObject'
+            - 's3:GetObjectVersion*'
+          Resource: 
+            - !Sub 'arn:aws:s3:::${BucketName}'
+            - !Sub 'arn:aws:s3:::${BucketName}/*'
+          Principal:
+            CanonicalUser: !Ref S3CanonicalUserId
+Outputs:
+  samplePackagesBucketDomain:
+    Value: !GetAtt sampleExamplePackagesBucket.DomainName
+  samplePackagesBucketARN:
+    Value: !GetAtt sampleExamplePackagesBucket.Arn
+
+
+    

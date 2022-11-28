@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: CloudFront for sample Project
+
+Parameters:
+  sampleBucketDomain: 
+    Description: Domain Name of the sample Example Package Bucket
+    Type: String
+  CertificateArn:
+    Description: ARN of the Certificate for *.sample.example.com
+    Type: String
+  Aliases:
+    Description: List of domains to be configured as aliases
+    Type: List<String>
+  LambdaBlogARN:
+    Description: ARN of the Lambda rewrite function
+    Type: String
+
+Resources:
+  sampleCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases: !Ref 'Aliases'
+        Comment: 'Cloudfront Distribution pointing to S3 bucket'
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: '300'
+            ErrorCode: '404'
+            ResponseCode: '200'
+            ResponsePagePath: '/'
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: 'true'
+          DefaultTTL: '60'
+          MinTTL: '60'
+          MaxTTL: '60'
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+          LambdaFunctionAssociations:
+            - EventType: origin-request
+              LambdaFunctionARN: !Ref LambdaBlogARN
+          CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
+
+        Enabled: true
+        HttpVersion: 'http2'
+        Origins:
+          - DomainName: !Ref 'sampleBucketDomain'
+            Id: S3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CfOriginAccessIdentity}'
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn: !Ref 'CertificateArn'
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+  CfOriginAccessIdentity:
+    Metadata:
+      Comment: 'Access S3 bucket content only through CloudFront'
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'Access S3 bucket content only through CloudFront'
+    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+Outputs:
+  ServiceDomainName:
+    Description: Endpoint for Cloudfront distribution
+    Value: !GetAtt 'sampleCloudFrontDistribution.DomainName'
+  ServiceID:
+    Description: Id for cloudfront distribution
+    Value: !Ref 'sampleCloudFrontDistribution'
+  CFS3CanonicalUserId:
+    Description: Access S3 bucket content only through CloudFront
+    Value: !GetAtt 'CfOriginAccessIdentity.S3CanonicalUserId'

@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda@edge Function
+  
+Parameters:
+  Name: 
+    Description: Lambda@edge Function name
+    Type: String
+  CodeS3Bucket:
+    Type: String
+    Description: S3 bucket in which the code is located
+  CodeS3Key:
+    Type: String
+    Description: String of path to the code zip file in the s3 bucket
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/service-role/'
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: AllowSSM
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: "*"
+  sampleLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref Name
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      Runtime: nodejs16.x
+      Handler: index.handler
+      Timeout: 5
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+
+Outputs:
+  LambdaARN:
+    Description: Lambda function ARN
+    Value:
+      Fn::GetAtt:
+        - sampleLambdaFunction
+        - Arn

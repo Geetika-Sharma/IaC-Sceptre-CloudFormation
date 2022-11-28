@@ -1,0 +1,12 @@
+# Project Global variables
+project_code: sample
+region: us-east-1
+
+# S3 variables
+s3_sample_lambda_bucket: sample-packages-lambdaatedge
+
+# Lambda variables
+lambda_function_name: sample-packages
+
+# IAM variables
+cloudfront_arn: # Specify CloudFront ARN

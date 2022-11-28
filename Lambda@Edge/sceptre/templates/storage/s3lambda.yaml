@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: S3 bucket to store Lambda function
+  
+Parameters:
+  BucketName:
+    Description: S3 bucket name
+    Type: String
+  
+Resources:
+  LambdaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+
+Outputs:
+  LambdaBucketDomain:
+    Value: !GetAtt LambdaBucket.DomainName
+  BucketName:
+    Value: !Ref LambdaBucket
+  

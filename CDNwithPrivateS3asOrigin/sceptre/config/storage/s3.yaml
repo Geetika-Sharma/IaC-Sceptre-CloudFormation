@@ -1,0 +1,6 @@
+template_path: storage/s3.yaml
+parameters:
+  BucketName: {{ s3_sample_packages_bucket }}
+  FullDomainName: {{ full_domain_name }}
+  CloudFrontID: {{ cloudfront_id }}
+  S3CanonicalUserId: {{ canonical_user_id }}

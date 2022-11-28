@@ -1,0 +1,3 @@
+template_path: storage/s3lambda.yaml
+parameters:
+  BucketName: {{ s3_sample_lambda_bucket }}
