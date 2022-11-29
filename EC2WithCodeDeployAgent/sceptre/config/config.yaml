@@ -1,0 +1,10 @@
+# Project Global variables
+project_code: example
+region: eu-west-1
+
+# EC2 variables
+image_id: ami-08754599965c30981 #-> AMI ID of public Amazon Linux 2 AMI amzn2-ami-hvm-2.0.20220218.1-x86_64-gp2
+instance_type: # Specify instance type
+key_name: # Specify existing key name
+subnet_id: # Specify public subnet
+vpc_id: # Specify the VPC ID

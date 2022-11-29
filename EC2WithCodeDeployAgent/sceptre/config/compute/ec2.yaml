@@ -1,0 +1,9 @@
+template_path: compute/ec2.yaml
+parameters:
+  Name: {{ project_code }}
+  LatestAmiId: {{ image_id }}
+  InstanceType: {{ instance_type }}
+  KeyName: {{ key_name }}
+  SubnetId: {{ subnet_id }}
+  Vpc: {{ vpc_id }}
+  EC2CodeDeployRole: !stack_output compute/iam.yaml::EC2CodeDeployRole

@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create one EC2 instance ready for CodeDeploy
+Parameters:
+  Name:
+    Description: User name.
+    Type: String
+  LatestAmiId:
+    Description: Image id.
+    Type: String
+  InstanceType:
+    Description: Instance Type
+    Type: String
+  KeyName:
+    Description: Private Key Name
+    Type: String
+  SubnetId:
+    Description: Subnet Id
+    Type: String
+  Vpc:
+    Description: VPC Id
+    Type: String
+  EC2CodeDeployRole:
+    Description: The name of the role to associate with the instance profile.
+    Type: String
+  InstanceCount:
+    Description: Number of Amazon EC2 instances (Must be a number between 1 and 3).
+    Type: Number
+    Default: '1'
+Resources:
+  SgEC2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow different local networks
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: example-EC2
+      SecurityGroupIngress:
+      # Allowing example local network
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 10.10.0.0/16 
+      # Allowing example2 local network
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 10.19.0.0/20 
+  EC2CodeDeployInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: !Sub '${Name}-ec2-codedeploy-policy'
+      Roles: 
+        - !Ref EC2CodeDeployRole
+  WaitHandle:
+    Type: 'AWS::CloudFormation::WaitConditionHandle'
+  WaitCondition:
+    Type: 'AWS::CloudFormation::WaitCondition'
+    Properties:
+      Count: !Ref InstanceCount
+      Handle: !Ref WaitHandle
+      Timeout: '900'
+  exampleEC2Instance: 
+    Type: AWS::EC2::Instance
+    Metadata:
+      'AWS::CloudFormation::Init':
+        packagesInstall:
+          packages:
+            yum:
+              lvm2: []
+              parted: []
+              xfsprogs: []
+        lvmconfig:
+          commands:
+            0001-pv-disk1:
+              command: "pvcreate /dev/xvdb"
+            0002-vgcreate-vg01:
+              command: "vgcreate examplevg /dev/xvdb"
+            0003-lvcreate-example:
+              command: "lvcreate examplevg -n lv01 -l100%FREE"
+            0004-testing-lvdisplay:
+              command: "pvdisplay; vgdisplay; lvdisplay"
+        format:
+          commands:
+            0001-format-example:
+              command: "mkfs.xfs -f /dev/mapper/examplevg-lv01"
+        paths:
+          commands:
+            0001-create-data-dir:
+              command: "mkdir /data"
+        mount:
+          commands:
+            0001-add-data-to-fstab:
+              command: "echo /dev/mapper/examplevg-lv01 /data xfs defaults 0 0 >> /etc/fstab"
+            0002-testing-fstab:
+              command: "cat /etc/fstab"
+            0003-mount-all:
+              command: "mount -av"
+        cloudwatchagent:
+          commands:
+            0001-install-cloudwatch-agent:
+              command: "rpm -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
+          files:
+            "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json":
+              content: !Sub |
+                {
+                  "metrics": {
+                    "append_dimensions": {
+                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
+                      "ImageId": "${!aws:ImageId}",
+                      "InstanceId": "${!aws:InstanceId}",
+                      "InstanceType": "${!aws:InstanceType}"
+                    },
+                    "metrics_collected": {
+                      "mem": {
+                        "measurement": [
+                          "mem_used_percent"
+                        ]
+                      },
+                      "swap": {
+                        "measurement": [
+                          "swap_used_percent"
+                        ]
+                      }
+                    }
+                  },
+                  "agent": {
+                      "metrics_collection_interval": 10,
+                      "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+                  },
+                  "logs": {
+                      "logs_collected": {
+                          "files": {
+                              "collect_list": [
+                                  {
+                                      "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+                                      "log_group_name": "amazon-cloudwatch-agent.log",
+                                      "log_stream_name": "amazon-cloudwatch-agent.log",
+                                      "retention_in_days": 7,
+                                      "timezone": "UTC"
+                                  },
+                                  {
+                                      "file_path": "/var/log/example/*.log",
+                                      "log_group_name": "/aws/ec2/example",
+                                      "retention_in_days": 731,
+                                      "timezone": "Local"
+                                  }
+                              ]
+                          }
+                      }
+                  }
+                }
+        cloudwatchagentrestart:
+          commands:
+            01_stop_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+            02_start_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+        configSets:
+          classicLvm:
+            - packagesInstall
+            - lvmconfig
+            - format
+            - paths
+            - mount
+          cloudWatchAgent:
+            - cloudwatchagent
+            - cloudwatchagentrestart
+          default:
+            - ConfigSet: classicLvm
+            - ConfigSet: cloudWatchAgent
+        services:
+          sysvint:
+            codedeploy-agent:
+              enabled: 'true'
+              ensureRunning: 'true'
+    Properties: 
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref EC2CodeDeployInstanceProfile
+      SecurityGroupIds:
+        - !Ref SgEC2
+      SubnetId: !Ref SubnetId
+      KeyName: !Ref KeyName
+      BlockDeviceMappings: 
+      - DeviceName: '/dev/sdb'
+        Ebs: 
+          VolumeType: 'gp2'
+          DeleteOnTermination: 'false'
+          VolumeSize: '100'
+      Tags:
+        - Key: 'Name'
+          Value: !Sub '${Name}-production'
+        - Key: 'CodeDeployTag'
+          Value: 'exampleOnEC2Production'
+      UserData: !Base64
+        Fn::Join:
+          - ''
+          - - "#!/bin/bash -ex\n"
+            - "yum update -y aws-cfn-bootstrap\n"
+            - "yum install -y aws-cli\n"
+            - "yum install -y ruby\n"
+            - "# Helper function.\n"
+            - "function error_exit\n"
+            - "{\n"
+            - '  /opt/aws/bin/cfn-signal -e 1 -r "$1" '''
+            - !Ref 'WaitHandle'
+            - "'\n"
+            - "  exit 1\n"
+            - "}\n"
+            - "# Install the AWS CodeDeploy Agent.\n"
+            - "cd /home/ec2-user/\n"
+            - "aws s3 cp 's3://aws-codedeploy-us-east-1/latest/codedeploy-agent.noarch.rpm'\
+              \ . || error_exit 'Failed to download AWS CodeDeploy Agent.'\n"
+            - "yum -y install codedeploy-agent.noarch.rpm || error_exit 'Failed to\
+              \ install AWS CodeDeploy Agent.' \n"
+            - '/opt/aws/bin/cfn-init -s '
+            - !Ref 'AWS::StackId'
+            - ' -r exampleEC2Instance --region '
+            - !Ref 'AWS::Region'
+            - " || error_exit 'Failed to run cfn-init.'\n"
+            - "# All is well, so signal success.\n"
+            - /opt/aws/bin/cfn-signal -e 0 -r "AWS CodeDeploy Agent setup complete."
+              '
+            - !Ref 'WaitHandle'
+            - "'\n"

@@ -1,0 +1,84 @@
+Description: >
+  Create IAM Role for EC2 instance ready for CodeDeploy
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  EC2CodeDeployRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+  InstanceRolePolicies:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: InstanceRole
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'cloudformation:Describe*'
+              - 'cloudformation:GetTemplate'
+              - 's3:Get*'
+              - 'kms:*'
+            Resource: '*'
+          - Effect: 'Allow'
+            Action:
+            - 's3:Get*'
+            - 's3:List*'
+            - 's3:Put*'
+            Resource:
+            - 'arn:aws:s3:::example-bucket-*'
+          - Effect: 'Allow'
+            Action:
+            - 's3:Get*'
+            - 's3:List*'
+            Resource:
+            - 'arn:aws:s3:::example-bucket2-*'
+          - Effect: 'Allow'
+            Action:
+            - 'sqs:DeleteMessage'
+            - 'sqs:ReceiveMessage'
+            Resource:
+            - 'arn:aws:sqs:eu-west-1:112233445566:example-sqs-*'
+          - Effect: 'Allow'
+            Action:
+            - 'sns:Publish'
+            Resource:
+            - 'arn:aws:sns:eu-west-1:112233445566:example-sns-*'
+          - Effect: 'Allow'
+            Action:
+              - 'ssm:GetParameters'
+              - 'ssm:GetParametersByPath'
+              - 'ssm:GetParameter'
+            Resource:
+            - 'arn:aws:ssm:eu-west-1:112233445566:parameter/example2*'
+          - Effect: 'Allow'
+            Action:
+              - 'cloudwatch:PutMetricData'
+              - 'ec2:DescribeVolumes'
+              - 'ec2:DescribeTags'
+              - 'logs:PutLogEvents'
+              - 'logs:DescribeLogStreams'
+              - 'logs:DescribeLogGroups'
+              - 'logs:CreateLogStream'
+              - 'logs:CreateLogGroup'
+              - 'logs:PutRetentionPolicy'
+            Resource:
+              - '*'
+          - Effect: 'Allow'
+            Action:
+              - 'ssm:GetParameter'
+            Resource:
+              - 'arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*'
+      Roles:
+        - !Ref EC2CodeDeployRole
+Outputs:
+  EC2CodeDeployRole:
+    Description: EC2 Iam Role.
+    Value: !Ref EC2CodeDeployRole
